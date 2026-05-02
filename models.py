@@ -5,6 +5,9 @@ from pydantic import BaseModel
 
 
 class BunkerKey(BaseModel):
+    class Config:
+        extra = "ignore"
+
     id: str
     wallet: str
     pubkey_hex: str
@@ -34,6 +37,9 @@ class PublicBunkerKey(BaseModel):
 
 
 class BunkerPermission(BaseModel):
+    class Config:
+        extra = "ignore"
+
     id: str
     wallet: str
     extension_id: str
@@ -45,6 +51,9 @@ class BunkerPermission(BaseModel):
 
 
 class SigningLog(BaseModel):
+    class Config:
+        extra = "ignore"
+
     id: str
     key_id: str
     extension_id: str

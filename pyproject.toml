@@ -1,0 +1,16 @@
+[project]
+name = "nsecbunker"
+version = "0.1.0"
+requires-python = ">=3.10"
+description = "Nostr key vault and signing oracle for LNbits"
+authors = [{ name = "arbadacarbaYK", email = "" }]
+urls = { Repository = "https://github.com/lightning-goats/nsecbunker" }
+readme = "README.md"
+dependencies = [
+    "lnbits>1",
+    "pynostr>=0.6.2",
+    "nostr-sdk>=0.38.0",
+]
+
+[tool.poetry]
+package-mode = false
