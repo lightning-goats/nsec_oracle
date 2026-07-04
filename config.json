@@ -2,7 +2,7 @@
   "name": "Nsec Bunker",
   "short_description": "Nostr key vault, internal signing oracle, and NIP-46 remote signer",
   "tile": "/nsecbunker/static/image/nsecbunker.png",
-  "version": "0.2.0.1",
+  "version": "0.2.0.2",
   "min_lnbits_version": "1.3.0",
   "contributors": [
     {
