@@ -126,3 +126,59 @@ async def m002_wallet_scoping(db: Connection):
 async def m003_key_labels(db: Connection):
     """Add optional human-readable label to keys."""
     await db.execute("ALTER TABLE nsecbunker.keys ADD COLUMN label TEXT")
+
+
+async def m004_nip46_connections(db: Connection):
+    """
+    NIP-46 (Nostr Connect / remote signing) connections.
+
+    Each row authorizes one remote Nostr client to request signing from one
+    bunker key, over one local nostrrelay. Per-kind permissions and rate limits
+    are reused from ``nsecbunker.permissions`` keyed by ``extension_id = <this
+    connection id>``.
+    """
+    await db.execute(
+        """
+        CREATE TABLE nsecbunker.connections (
+            id TEXT PRIMARY KEY,
+            wallet TEXT NOT NULL,
+            key_id TEXT NOT NULL,
+            relay_id TEXT NOT NULL,
+            secret TEXT NOT NULL,
+            client_pubkey TEXT,
+            label TEXT,
+            allow_encryption BOOLEAN NOT NULL DEFAULT false,
+            active BOOLEAN NOT NULL DEFAULT true,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            last_used_at TIMESTAMP
+        );
+        """
+    )
+    await db.execute(
+        "CREATE INDEX idx_connections_wallet ON nsecbunker.connections (wallet)"
+    )
+
+
+async def m005_remote_relays(db: Connection):
+    """
+    Allow NIP-46 connections to use a remote relay (opt-in) in addition to the
+    local nostrrelay, and support the client-initiated ``nostrconnect://`` flow.
+
+    ``relay_url`` holds an explicit relay URL for remote connections; local
+    connections keep ``relay_id`` (a nostrrelay id) and store ``relay_id = ''``
+    is never used — locality is decided by whichever field is set.
+    ``pending_connect`` marks a nostrconnect connection that still needs its
+    proactive connect acknowledgement published.
+    """
+    await db.execute(
+        "ALTER TABLE nsecbunker.connections ADD COLUMN relay_url TEXT"
+    )
+    await db.execute(
+        "ALTER TABLE nsecbunker.connections "
+        "ADD COLUMN pending_connect BOOLEAN NOT NULL DEFAULT false"
+    )
+    # Remote connections carry no local relay id; allow it to be blank.
+    if db.type in {"POSTGRES", "COCKROACH"}:
+        await db.execute(
+            "ALTER TABLE nsecbunker.connections ALTER COLUMN relay_id DROP NOT NULL"
+        )

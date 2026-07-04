@@ -1,3 +1,5 @@
+import time
+
 from loguru import logger
 from pynostr.event import Event
 
@@ -13,12 +15,24 @@ from .crud import (
 try:
     from nostr_sdk import (
         Nip44Version,
+    )
+    from nostr_sdk import (
         PublicKey as NsPK,
+    )
+    from nostr_sdk import (
         SecretKey as NsSK,
-        nip04_encrypt as _nip04_enc,
+    )
+    from nostr_sdk import (
         nip04_decrypt as _nip04_dec,
-        nip44_encrypt as _nip44_enc,
+    )
+    from nostr_sdk import (
+        nip04_encrypt as _nip04_enc,
+    )
+    from nostr_sdk import (
         nip44_decrypt as _nip44_dec,
+    )
+    from nostr_sdk import (
+        nip44_encrypt as _nip44_enc,
     )
 
     _HAS_NOSTR_SDK = True
@@ -104,12 +118,16 @@ async def sign_event(
 
     # Decrypt the key and sign the requested event.
     private_key_hex = await get_decrypted_private_key(key.id)
+    # Default created_at explicitly rather than relying on the Nostr library to
+    # coerce a missing/None timestamp — older pynostr releases (the extension
+    # supports >=0.6.2) would otherwise serialize an invalid null created_at.
+    created_at = unsigned_event.get("created_at") or int(time.time())
     event = Event(
         kind=kind,
         tags=unsigned_event.get("tags", []),
         content=unsigned_event.get("content", ""),
         pubkey=key.pubkey_hex,
-        created_at=unsigned_event.get("created_at"),
+        created_at=created_at,
     )
     event.sign(private_key_hex)
     signed = event.to_dict()

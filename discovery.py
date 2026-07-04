@@ -1,6 +1,5 @@
 import json
 from pathlib import Path
-from typing import Optional
 
 from loguru import logger
 from pydantic import BaseModel
@@ -18,7 +17,7 @@ class SigningRequirement(BaseModel):
     kind_label: str
     description: str
     required: bool = False
-    recommended_rate_limit: Optional[RecommendedRateLimit] = None
+    recommended_rate_limit: RecommendedRateLimit | None = None
 
 
 class ExtensionSigningInfo(BaseModel):

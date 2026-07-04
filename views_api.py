@@ -1,33 +1,45 @@
+import secrets
 from http import HTTPStatus
 
 from fastapi import APIRouter, Depends, HTTPException
-from lnbits.core.models import WalletTypeInfo
-from lnbits.decorators import require_admin_key, require_invoice_key
 from loguru import logger
 from pynostr.key import PrivateKey
+from starlette.concurrency import run_in_threadpool
+
+from lnbits.core.models import WalletTypeInfo
+from lnbits.decorators import require_admin_key, require_invoice_key
 
 from .crud import (
     count_signing_logs,
+    create_connection,
     create_key,
+    create_nostrconnect_connection,
     create_permission,
+    delete_connection,
     delete_key,
     delete_permission,
     delete_permissions_for_key,
+    get_connection,
+    get_connections,
     get_decrypted_private_key,
     get_key,
     get_keys,
     get_permission,
     get_permissions,
     get_signing_logs,
+    update_connection,
     update_key,
     update_permission,
 )
 from .discovery import discover_signing_requirements
 from .helpers import parse_nostr_private_key
 from .models import (
+    BunkerConnection,
     BunkerKey,
     BunkerPermission,
+    CreateConnectionData,
     CreateKeyData,
+    CreateNostrConnectData,
     CreatePermissionData,
     Nip04DecryptData,
     Nip04EncryptData,
@@ -36,8 +48,15 @@ from .models import (
     PublicBunkerKey,
     QuickSetupData,
     SignEventData,
+    UpdateConnectionData,
     UpdateKeyData,
     UpdatePermissionData,
+)
+from .nip46 import (
+    bunker_uri,
+    connection_client_url,
+    ensure_relay_allows,
+    parse_nostrconnect,
 )
 from .services import (
     get_wallet_pubkey,
@@ -168,6 +187,12 @@ async def api_export_key(
             status_code=HTTPStatus.FORBIDDEN, detail="Not your key."
         )
     private_key_hex = await get_decrypted_private_key(key_id)
+    # Exporting the raw private key is the single most sensitive operation in
+    # the vault — always leave an audit trail.
+    logger.warning(
+        f"nsecbunker: private key EXPORTED for key {key_id[:8]}... "
+        f"(wallet {wallet.wallet.id[:8]}..., pubkey {key.pubkey_hex[:12]}...)"
+    )
     pk = PrivateKey(bytes.fromhex(private_key_hex))
     return {"private_key_hex": private_key_hex, "nsec": pk.nsec}
 
@@ -243,7 +268,9 @@ async def api_delete_permission(
 async def api_discover(
     wallet: WalletTypeInfo = Depends(require_admin_key),
 ) -> list[dict]:
-    discovered = discover_signing_requirements()
+    # Runs blocking filesystem I/O (scans every extension's config.json) — keep
+    # it off the event loop.
+    discovered = await run_in_threadpool(discover_signing_requirements)
     existing = await get_permissions(wallet.wallet.id)
     keys = await get_keys(wallet.wallet.id)
     default_key_id = keys[0].id if keys else None
@@ -287,7 +314,7 @@ async def api_quick_setup(
 ) -> list[BunkerPermission]:
     await _require_owned_key(wallet.wallet.id, data.key_id)
 
-    discovered = discover_signing_requirements()
+    discovered = await run_in_threadpool(discover_signing_requirements)
     ext_info = next(
         (e for e in discovered if e.extension_id == data.extension_id), None
     )
@@ -505,3 +532,148 @@ async def api_get_logs(
     logs = await get_signing_logs(wallet.wallet.id, limit=limit, offset=offset)
     total = await count_signing_logs(wallet.wallet.id)
     return {"data": logs, "total": total}
+
+
+# --- NIP-46 (Nostr Connect / remote signing) ---
+
+
+async def _connection_response(conn: BunkerConnection) -> dict:
+    key = await get_key(conn.key_id)
+    signer_pubkey = key.pubkey_hex if key else ""
+    client_url = connection_client_url(conn)
+    data = conn.dict(exclude={"secret"})
+    data["signer_pubkey"] = signer_pubkey
+    data["relay_url"] = client_url
+    data["is_local"] = conn.is_local
+    # nostrconnect connections are client-initiated; no bunker:// URI to hand out.
+    data["bunker_uri"] = (
+        bunker_uri(signer_pubkey, client_url, conn.secret)
+        if signer_pubkey and client_url and not conn.pending_connect
+        else None
+    )
+    return data
+
+
+@nsecbunker_api_router.get("/api/v1/relays/local")
+async def api_local_relays(
+    wallet: WalletTypeInfo = Depends(require_admin_key),
+) -> list[dict]:
+    """Active local nostrrelay relays the user can bind a NIP-46 connection to."""
+    try:
+        from lnbits.extensions.nostrrelay.crud import get_relays
+    except ImportError:
+        return []
+    relays = await get_relays(wallet.wallet.user)
+    return [
+        {"id": r.id, "name": r.name, "active": r.active}
+        for r in relays
+        if r.active
+    ]
+
+
+@nsecbunker_api_router.post(
+    "/api/v1/connections", status_code=HTTPStatus.CREATED
+)
+async def api_create_connection(
+    data: CreateConnectionData,
+    wallet: WalletTypeInfo = Depends(require_admin_key),
+) -> dict:
+    key = await _require_owned_key(wallet.wallet.id, data.key_id)
+
+    # Local relays must exist and be owned by the user; remote relays are used
+    # as-is (the privacy trade-off is surfaced in the UI).
+    if data.relay_id:
+        try:
+            from lnbits.extensions.nostrrelay.crud import get_relay
+        except ImportError as exc:
+            raise HTTPException(
+                status_code=HTTPStatus.SERVICE_UNAVAILABLE,
+                detail="The nostrrelay extension is required for local relays.",
+            ) from exc
+        relay = await get_relay(wallet.wallet.user, data.relay_id)
+        if not relay:
+            raise HTTPException(
+                status_code=HTTPStatus.NOT_FOUND, detail="Local relay not found."
+            )
+
+    secret = secrets.token_urlsafe(24)
+    conn = await create_connection(wallet.wallet.id, data.key_id, data, secret)
+    if conn.is_local:
+        # Pre-authorize the signer key so it can publish on a paid relay.
+        await ensure_relay_allows(conn.relay_id, key.pubkey_hex)
+    return await _connection_response(conn)
+
+
+@nsecbunker_api_router.post(
+    "/api/v1/connections/nostrconnect", status_code=HTTPStatus.CREATED
+)
+async def api_create_nostrconnect(
+    data: CreateNostrConnectData,
+    wallet: WalletTypeInfo = Depends(require_admin_key),
+) -> dict:
+    """Client-initiated pairing: paste the nostrconnect:// URI the app shows."""
+    await _require_owned_key(wallet.wallet.id, data.key_id)
+    try:
+        parsed = parse_nostrconnect(data.uri)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=HTTPStatus.BAD_REQUEST, detail=str(exc)
+        ) from exc
+    conn = await create_nostrconnect_connection(
+        wallet.wallet.id,
+        data.key_id,
+        parsed["relay_url"],
+        parsed["secret"],
+        parsed["client_pubkey"],
+        data.label,
+        data.allow_encryption,
+    )
+    return await _connection_response(conn)
+
+
+@nsecbunker_api_router.get("/api/v1/connections")
+async def api_get_connections(
+    wallet: WalletTypeInfo = Depends(require_admin_key),
+) -> list[dict]:
+    conns = await get_connections(wallet.wallet.id)
+    return [await _connection_response(c) for c in conns]
+
+
+@nsecbunker_api_router.put(
+    "/api/v1/connections/{conn_id}", status_code=HTTPStatus.OK
+)
+async def api_update_connection(
+    conn_id: str,
+    data: UpdateConnectionData,
+    wallet: WalletTypeInfo = Depends(require_admin_key),
+) -> dict:
+    conn = await get_connection(conn_id)
+    if not conn:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Connection not found."
+        )
+    if conn.wallet != wallet.wallet.id:
+        raise HTTPException(
+            status_code=HTTPStatus.FORBIDDEN, detail="Not your connection."
+        )
+    updated = await update_connection(conn_id, data)
+    return await _connection_response(updated)
+
+
+@nsecbunker_api_router.delete(
+    "/api/v1/connections/{conn_id}", status_code=HTTPStatus.OK
+)
+async def api_delete_connection(
+    conn_id: str,
+    wallet: WalletTypeInfo = Depends(require_admin_key),
+) -> None:
+    conn = await get_connection(conn_id)
+    if not conn:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Connection not found."
+        )
+    if conn.wallet != wallet.wallet.id:
+        raise HTTPException(
+            status_code=HTTPStatus.FORBIDDEN, detail="Not your connection."
+        )
+    await delete_connection(conn_id)

@@ -5,7 +5,7 @@ from fastapi import APIRouter
 from lnbits.tasks import create_permanent_unique_task
 
 from .crud import db
-from .tasks import cleanup_old_signing_logs
+from .tasks import cleanup_old_signing_logs, nip46_listener
 from .views import nsecbunker_generic_router
 from .views_api import nsecbunker_api_router
 
@@ -26,21 +26,27 @@ def nsecbunker_stop():
     for task in scheduled_tasks:
         try:
             task.cancel()
-        except Exception:
+        except Exception:  # noqa: S110 — best-effort cancel on shutdown
             pass
 
 
 def nsecbunker_start():
-    task = create_permanent_unique_task(
-        "ext_nsecbunker_log_cleanup", cleanup_old_signing_logs
+    scheduled_tasks.append(
+        create_permanent_unique_task(
+            "ext_nsecbunker_log_cleanup", cleanup_old_signing_logs
+        )
     )
-    scheduled_tasks.append(task)
+    # NIP-46 remote-signing listener. Self-gates: it idles until the nostrrelay
+    # extension is installed and at least one active connection exists.
+    scheduled_tasks.append(
+        create_permanent_unique_task("ext_nsecbunker_nip46", nip46_listener)
+    )
 
 
 __all__ = [
     "db",
     "nsecbunker_ext",
-    "nsecbunker_static_files",
     "nsecbunker_start",
+    "nsecbunker_static_files",
     "nsecbunker_stop",
 ]

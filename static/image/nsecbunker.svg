@@ -1,14 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
   <title id="title">Nsec Bunker</title>
-  <desc id="desc">A secured Nostr key represented by a lock and lightning bolt.</desc>
+  <desc id="desc">A vault door with a lightning keyhole securing a Nostr key.</desc>
   <defs>
     <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#24104f"/>
       <stop offset="1" stop-color="#7137d8"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="96" fill="url(#background)"/>
-  <path d="M164 230v-48c0-52 40-94 92-94s92 42 92 94v48" fill="none" stroke="#f4efff" stroke-width="34" stroke-linecap="round"/>
-  <rect x="112" y="210" width="288" height="226" rx="44" fill="#f4efff"/>
-  <path d="M282 253l-83 108h55l-24 83 84-116h-55z" fill="#7137d8"/>
+  <rect width="512" height="512" rx="104" fill="url(#background)"/>
+  <!-- vault door -->
+  <circle cx="256" cy="256" r="158" fill="#f4efff"/>
+  <circle cx="256" cy="256" r="122" fill="none" stroke="#7137d8" stroke-width="20" opacity="0.85"/>
+  <!-- bolt-head rivets around the rim -->
+  <g fill="#7137d8">
+    <circle cx="256" cy="118" r="12"/>
+    <circle cx="256" cy="394" r="12"/>
+    <circle cx="118" cy="256" r="12"/>
+    <circle cx="394" cy="256" r="12"/>
+  </g>
+  <!-- lightning keyhole -->
+  <path d="M288 150 L206 272 L250 272 L224 362 L306 240 L262 240 Z" fill="#7137d8"/>
 </svg>
