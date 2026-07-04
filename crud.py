@@ -11,14 +11,11 @@ from lnbits.helpers import (
 
 from .helpers import parse_nostr_private_key
 from .models import (
-    BunkerConnection,
     BunkerKey,
     BunkerPermission,
-    CreateConnectionData,
     CreateKeyData,
     CreatePermissionData,
     SigningLog,
-    UpdateConnectionData,
     UpdateKeyData,
     UpdatePermissionData,
 )
@@ -314,142 +311,4 @@ async def delete_old_signing_logs(retention_days: int = 30) -> None:
         f"DELETE FROM nsecbunker.signing_log "  # noqa: S608
         f"WHERE created_at < {db.timestamp_placeholder('cutoff_ts')}",
         {"cutoff_ts": cutoff_ts},
-    )
-
-
-# --- NIP-46 Connections ---
-
-
-async def create_connection(
-    wallet_id: str, key_id: str, data: CreateConnectionData, secret: str
-) -> BunkerConnection:
-    conn = BunkerConnection(
-        id=urlsafe_short_hash(),
-        wallet=wallet_id,
-        key_id=key_id,
-        relay_id=data.relay_id,
-        relay_url=data.relay_url,
-        secret=secret,
-        label=data.label,
-        allow_encryption=data.allow_encryption,
-        active=True,
-        created_at=datetime.now(timezone.utc),
-    )
-    await db.insert("nsecbunker.connections", conn)
-    return conn
-
-
-async def create_nostrconnect_connection(
-    wallet_id: str,
-    key_id: str,
-    relay_url: str,
-    secret: str,
-    client_pubkey: str,
-    label: str | None,
-    allow_encryption: bool,
-) -> BunkerConnection:
-    """A client-initiated connection: the client pubkey is already known and we
-    owe it a proactive connect acknowledgement (``pending_connect``)."""
-    conn = BunkerConnection(
-        id=urlsafe_short_hash(),
-        wallet=wallet_id,
-        key_id=key_id,
-        relay_url=relay_url,
-        secret=secret,
-        client_pubkey=client_pubkey,
-        label=label,
-        allow_encryption=allow_encryption,
-        active=True,
-        pending_connect=True,
-        created_at=datetime.now(timezone.utc),
-    )
-    await db.insert("nsecbunker.connections", conn)
-    return conn
-
-
-async def clear_pending_connect(conn_id: str) -> None:
-    await db.execute(
-        "UPDATE nsecbunker.connections SET pending_connect = false WHERE id = :id",
-        {"id": conn_id},
-    )
-
-
-async def get_connections(wallet_id: str) -> list[BunkerConnection]:
-    return await db.fetchall(
-        "SELECT * FROM nsecbunker.connections WHERE wallet = :wallet "
-        "ORDER BY created_at DESC",
-        {"wallet": wallet_id},
-        BunkerConnection,
-    )
-
-
-async def get_connection(conn_id: str) -> BunkerConnection | None:
-    return await db.fetchone(
-        "SELECT * FROM nsecbunker.connections WHERE id = :id",
-        {"id": conn_id},
-        BunkerConnection,
-    )
-
-
-async def get_active_connections() -> list[BunkerConnection]:
-    """All active connections across every wallet — used by the relay listener."""
-    return await db.fetchall(
-        "SELECT * FROM nsecbunker.connections WHERE active = true",
-        {},
-        BunkerConnection,
-    )
-
-
-async def bind_connection_client(conn_id: str, client_pubkey: str) -> None:
-    await db.execute(
-        # Timestamp placeholder is server-generated, not user input.
-        "UPDATE nsecbunker.connections "  # noqa: S608
-        "SET client_pubkey = :client_pubkey, "
-        f"last_used_at = {db.timestamp_placeholder('now')} "
-        "WHERE id = :id",
-        {
-            "id": conn_id,
-            "client_pubkey": client_pubkey,
-            "now": int(datetime.now(timezone.utc).timestamp()),
-        },
-    )
-
-
-async def touch_connection(conn_id: str) -> None:
-    await db.execute(
-        # Timestamp placeholder is server-generated, not user input.
-        "UPDATE nsecbunker.connections "  # noqa: S608
-        f"SET last_used_at = {db.timestamp_placeholder('now')} WHERE id = :id",
-        {"id": conn_id, "now": int(datetime.now(timezone.utc).timestamp())},
-    )
-
-
-async def update_connection(
-    conn_id: str, data: UpdateConnectionData
-) -> BunkerConnection:
-    conn = await get_connection(conn_id)
-    if not conn:
-        raise LookupError(f"Connection {conn_id} not found")
-    fields = data.dict(exclude_unset=True)
-    if fields:
-        set_clause = ", ".join(f"{name} = :{name}" for name in fields)
-        fields["id"] = conn_id
-        await db.execute(
-            f"UPDATE nsecbunker.connections SET {set_clause} WHERE id = :id",  # noqa: S608
-            fields,
-        )
-    updated = await get_connection(conn_id)
-    assert updated is not None
-    return updated
-
-
-async def delete_connection(conn_id: str) -> None:
-    # Per-kind permissions for a connection are stored with extension_id = conn_id.
-    await db.execute(
-        "DELETE FROM nsecbunker.permissions WHERE extension_id = :conn_id",
-        {"conn_id": conn_id},
-    )
-    await db.execute(
-        "DELETE FROM nsecbunker.connections WHERE id = :id",
-        {"id": conn_id},
     )

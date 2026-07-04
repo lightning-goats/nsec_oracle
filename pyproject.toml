@@ -1,6 +1,6 @@
 [project]
 name = "nsecbunker"
-version = "0.2.0.2"
+version = "0.3.0"
 requires-python = ">=3.10"
 description = "Nostr key vault and signing oracle for LNbits"
 authors = [{ name = "Sat", email = "792024+santyr@users.noreply.github.com" }]

@@ -14,9 +14,9 @@ def test_kind_zero_keeps_sensitive_warning_and_description():
 def test_extension_metadata_references_tracked_assets():
     config = json.loads((ROOT / "config.json").read_text())
 
-    assert config["tile"] == "/nsecbunker/static/image/nsecbunker.svg"
-    assert (ROOT / "static/image/nsecbunker.svg").is_file()
+    assert config["tile"] == "/nsecbunker/static/image/nsecbunker.png"
+    assert (ROOT / "static/image/nsecbunker.png").is_file()
     assert config["description_md"].endswith(
-        "/lightning-goats/nsecbunker/master/description.md"
+        "/lightning-goats/nsecbunker/main/description.md"
     )
     assert (ROOT / "description.md").is_file()

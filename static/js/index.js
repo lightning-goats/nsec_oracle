@@ -41,8 +41,6 @@ window.app = Vue.createApp({
       this.getPermissions()
       this.getLogs()
       this.discoverExtensions()
-      this.getConnections()
-      this.getLocalRelays()
     }
   },
   data() {
@@ -51,17 +49,6 @@ window.app = Vue.createApp({
       keys: [],
       permissions: [],
       logs: [],
-      connections: [],
-      localRelays: [],
-      connForm: {
-        key_id: null,
-        source: 'local',
-        relay_id: null,
-        relay_url: '',
-        nc_uri: '',
-        allow_encryption: false,
-        label: ''
-      },
       discoveredExtensions: [],
       extensionOptions: [],
       newKeyInput: '',
@@ -178,16 +165,6 @@ window.app = Vue.createApp({
           : this.shortKey(k.pubkey_hex),
         value: k.id
       }))
-    },
-    permissionTargets() {
-      // A permission target is either a consuming extension (by machine name)
-      // or a NIP-46 connection (by its id — the bunker stores connection
-      // permissions with extension_id = connection.id).
-      var conns = (this.connections || []).map(c => ({
-        label: 'Nostr Connect: ' + (c.label || c.id.slice(0, 8)),
-        value: c.id
-      }))
-      return (this.extensionOptions || []).concat(conns)
     },
     selectedKindSensitive() {
       if (this.permForm.kind === null) return false
@@ -520,112 +497,6 @@ window.app = Vue.createApp({
           LNbits.utils.notifyApiError(err)
         })
     },
-    getConnections() {
-      LNbits.api
-        .request(
-          'GET',
-          '/nsecbunker/api/v1/connections',
-          this.selectedWallet.adminkey
-        )
-        .then(response => {
-          this.connections = response.data
-        })
-        .catch(err => LNbits.utils.notifyApiError(err))
-    },
-    getLocalRelays() {
-      LNbits.api
-        .request(
-          'GET',
-          '/nsecbunker/api/v1/relays/local',
-          this.selectedWallet.adminkey
-        )
-        .then(response => {
-          this.localRelays = response.data
-        })
-        .catch(() => {
-          this.localRelays = []
-        })
-    },
-    createConnection() {
-      var f = this.connForm
-      if (!f.key_id) {
-        Quasar.Notify.create({type: 'warning', message: 'Select a key first.'})
-        return
-      }
-      var url = '/nsecbunker/api/v1/connections'
-      var payload = {
-        key_id: f.key_id,
-        allow_encryption: f.allow_encryption,
-        label: f.label || null
-      }
-      if (f.source === 'local') {
-        if (!f.relay_id) {
-          Quasar.Notify.create({
-            type: 'warning',
-            message: 'Select a local relay.'
-          })
-          return
-        }
-        payload.relay_id = f.relay_id
-      } else if (f.source === 'remote') {
-        if (!f.relay_url) {
-          Quasar.Notify.create({
-            type: 'warning',
-            message: 'Enter a remote relay URL.'
-          })
-          return
-        }
-        payload.relay_url = f.relay_url
-      } else {
-        // nostrconnect:// paste
-        if (!f.nc_uri) {
-          Quasar.Notify.create({
-            type: 'warning',
-            message: 'Paste the nostrconnect:// URI from your app.'
-          })
-          return
-        }
-        url = '/nsecbunker/api/v1/connections/nostrconnect'
-        payload = {
-          key_id: f.key_id,
-          uri: f.nc_uri,
-          allow_encryption: f.allow_encryption,
-          label: f.label || null
-        }
-      }
-      LNbits.api
-        .request('POST', url, this.selectedWallet.adminkey, payload)
-        .then(() => {
-          this.connForm.label = ''
-          this.connForm.relay_url = ''
-          this.connForm.nc_uri = ''
-          this.getConnections()
-          Quasar.Notify.create({
-            type: 'positive',
-            message: 'Nostr Connect authorization created.'
-          })
-        })
-        .catch(err => LNbits.utils.notifyApiError(err))
-    },
-    deleteConnection(connId) {
-      LNbits.utils
-        .confirmDialog(
-          'Revoke this connection? The remote client will no longer be able to sign.'
-        )
-        .onOk(() => {
-          LNbits.api
-            .request(
-              'DELETE',
-              '/nsecbunker/api/v1/connections/' + connId,
-              this.selectedWallet.adminkey
-            )
-            .then(() => this.getConnections())
-            .catch(err => LNbits.utils.notifyApiError(err))
-        })
-    },
-    copyBunkerUri(uri) {
-      LNbits.utils.copyText(uri, 'Bunker URI copied to clipboard')
-    }
   },
   created() {
     this.selectedWallet = this.g.user.wallets[0]

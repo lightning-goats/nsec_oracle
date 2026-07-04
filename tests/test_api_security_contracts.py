@@ -63,19 +63,14 @@ def _load_views_api_module():
 
     for name in (
         "count_signing_logs",
-        "create_connection",
         "create_key",
-        "create_nostrconnect_connection",
         "create_permission",
-        "delete_connection",
         "delete_key",
         "delete_permission",
         "delete_permissions_for_key",
-        "get_connection",
         "get_decrypted_private_key",
         "get_key",
         "get_permission",
-        "update_connection",
         "update_key",
         "update_permission",
     ):
@@ -83,25 +78,11 @@ def _load_views_api_module():
     crud.get_keys = async_list
     crud.get_permissions = async_list
     crud.get_signing_logs = async_list
-    crud.get_connections = async_list
     sys.modules[f"{package_name}.crud"] = crud
 
     discovery = types.ModuleType(f"{package_name}.discovery")
     discovery.discover_signing_requirements = lambda: []
     sys.modules[f"{package_name}.discovery"] = discovery
-
-    nip46 = types.ModuleType(f"{package_name}.nip46")
-    nip46.bunker_uri = lambda *a, **k: "bunker://stub"
-    nip46.ensure_relay_allows = async_none
-    nip46.connection_client_url = lambda conn: "wss://stub/relay"
-    nip46.parse_nostrconnect = lambda uri: {
-        "client_pubkey": "cc",
-        "relay_url": "wss://stub",
-        "secret": "s",
-        "perms": "",
-        "name": "",
-    }
-    sys.modules[f"{package_name}.nip46"] = nip46
 
     helpers = types.ModuleType(f"{package_name}.helpers")
     helpers.parse_nostr_private_key = lambda key: key

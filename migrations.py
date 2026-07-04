@@ -182,3 +182,16 @@ async def m005_remote_relays(db: Connection):
         await db.execute(
             "ALTER TABLE nsecbunker.connections ALTER COLUMN relay_id DROP NOT NULL"
         )
+
+
+async def m006_drop_connections(db: Connection):
+    """
+    Remove the relay-facing NIP-46 layer.
+
+    nsecbunker now focuses on being an internal signing oracle for other LNbits
+    extensions; external NIP-46 remote signing is served by the dedicated
+    ``nostr_bunker`` extension. Drop the unused connections table. Per-connection
+    permissions (stored in ``permissions`` with ``extension_id`` = a connection
+    id) are left in place — they are inert once the connections are gone.
+    """
+    await db.execute("DROP TABLE IF EXISTS nsecbunker.connections")

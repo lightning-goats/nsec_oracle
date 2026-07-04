@@ -1,6 +1,8 @@
 # Nsec Bunker
 
-A Nostr key vault and signing oracle for [LNbits](https://github.com/lnbits/lnbits). Store Nostr private keys server-side, grant per-extension signing permissions with rate limits, and expose a full set of NIP-46-style operations (sign, encrypt, decrypt) over a REST API.
+A server-side Nostr **signing oracle** for [LNbits](https://github.com/lnbits/lnbits). Nsec Bunker keeps Nostr private keys on your instance and lets other LNbits extensions — and admin-key API clients — sign events and encrypt/decrypt messages through per-key, per-kind permissions with rate limits and an audit log, without ever exposing the key.
+
+> **Scope:** Nsec Bunker is for **in-instance signing** — extensions and API clients that run on your LNbits. It is *not* a relay-facing remote signer for external Nostr apps. To serve external clients over `bunker://` / `nostrconnect://`, use the dedicated [`nostr_bunker`](https://github.com/lnbits/nostr_bunker) extension; the two are complementary.
 
 ## Use Cases
 

@@ -5,7 +5,7 @@ from fastapi import APIRouter
 from lnbits.tasks import create_permanent_unique_task
 
 from .crud import db
-from .tasks import cleanup_old_signing_logs, nip46_listener
+from .tasks import cleanup_old_signing_logs
 from .views import nsecbunker_generic_router
 from .views_api import nsecbunker_api_router
 
@@ -35,11 +35,6 @@ def nsecbunker_start():
         create_permanent_unique_task(
             "ext_nsecbunker_log_cleanup", cleanup_old_signing_logs
         )
-    )
-    # NIP-46 remote-signing listener. Self-gates: it idles until the nostrrelay
-    # extension is installed and at least one active connection exists.
-    scheduled_tasks.append(
-        create_permanent_unique_task("ext_nsecbunker_nip46", nip46_listener)
     )
 
 

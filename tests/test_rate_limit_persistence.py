@@ -1,11 +1,10 @@
 import asyncio
 from datetime import datetime, timezone
 
-from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.pool import NullPool
-
 from lnbits.db import Database
 from lnbits.extensions.nsecbunker import crud
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.pool import NullPool
 
 
 def test_rate_limit_check_and_log_are_one_database_operation(tmp_path):
