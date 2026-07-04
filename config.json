@@ -2,7 +2,7 @@
   "name": "Nsec Bunker",
   "short_description": "Server-side Nostr signing oracle for LNbits extensions (per-key permissions, rate limits, audit)",
   "tile": "/nsecbunker/static/image/nsecbunker.png",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "min_lnbits_version": "1.3.0",
   "contributors": [
     {
