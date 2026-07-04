@@ -262,48 +262,6 @@
       </q-card-section>
     </q-card>
 
-    <!-- Signing Log Card -->
-    <q-card class="q-pa-sm">
-      <q-card-section>
-        <div class="row items-center no-wrap q-mb-md">
-          <div class="col">
-            <h5 class="text-subtitle1 q-my-none">Signing Log</h5>
-          </div>
-          <div>
-            <q-btn
-              flat
-              dense
-              icon="refresh"
-              @click="getLogs()"
-            ></q-btn>
-          </div>
-        </div>
-
-        <q-table
-          dense
-          flat
-          :rows="logs"
-          :columns="logCols"
-          row-key="id"
-          no-data-label="No signing activity yet."
-          v-model:pagination="logPagination"
-          @request="getLogs"
-        >
-          <template v-slot:body-cell-extension_id="props">
-            <q-td :props="props">
-              <span v-text="extName(props.row.extension_id)"></span>
-            </q-td>
-          </template>
-          <template v-slot:body-cell-event_id="props">
-            <q-td :props="props">
-              <span class="text-caption" v-text="shortKey(props.row.event_id)"></span>
-              <q-tooltip v-text="props.row.event_id"></q-tooltip>
-            </q-td>
-          </template>
-        </q-table>
-      </q-card-section>
-    </q-card>
-
     <!-- Nostr Connect (NIP-46) -->
     <q-card class="q-pa-sm">
       <q-card-section>
@@ -456,6 +414,48 @@
           Paste a connection's bunker:// URI into your Nostr app to link it. It
           can only sign the event kinds you granted it, at the configured rate.
         </p>
+      </q-card-section>
+    </q-card>
+
+    <!-- Signing Log Card -->
+    <q-card class="q-pa-sm">
+      <q-card-section>
+        <div class="row items-center no-wrap q-mb-md">
+          <div class="col">
+            <h5 class="text-subtitle1 q-my-none">Signing Log</h5>
+          </div>
+          <div>
+            <q-btn
+              flat
+              dense
+              icon="refresh"
+              @click="getLogs()"
+            ></q-btn>
+          </div>
+        </div>
+
+        <q-table
+          dense
+          flat
+          :rows="logs"
+          :columns="logCols"
+          row-key="id"
+          no-data-label="No signing activity yet."
+          v-model:pagination="logPagination"
+          @request="getLogs"
+        >
+          <template v-slot:body-cell-extension_id="props">
+            <q-td :props="props">
+              <span v-text="extName(props.row.extension_id)"></span>
+            </q-td>
+          </template>
+          <template v-slot:body-cell-event_id="props">
+            <q-td :props="props">
+              <span class="text-caption" v-text="shortKey(props.row.event_id)"></span>
+              <q-tooltip v-text="props.row.event_id"></q-tooltip>
+            </q-td>
+          </template>
+        </q-table>
       </q-card-section>
     </q-card>
 
