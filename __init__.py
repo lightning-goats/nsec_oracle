@@ -6,23 +6,23 @@ from lnbits.tasks import create_permanent_unique_task
 
 from .crud import db
 from .tasks import cleanup_old_signing_logs
-from .views import nsecbunker_generic_router
-from .views_api import nsecbunker_api_router
+from .views import nsec_oracle_generic_router
+from .views_api import nsec_oracle_api_router
 
-nsecbunker_static_files = [
+nsec_oracle_static_files = [
     {
-        "path": "/nsecbunker/static",
-        "name": "nsecbunker_static",
+        "path": "/nsec_oracle/static",
+        "name": "nsec_oracle_static",
     }
 ]
-nsecbunker_ext: APIRouter = APIRouter(prefix="/nsecbunker", tags=["nsecbunker"])
-nsecbunker_ext.include_router(nsecbunker_generic_router)
-nsecbunker_ext.include_router(nsecbunker_api_router)
+nsec_oracle_ext: APIRouter = APIRouter(prefix="/nsec_oracle", tags=["nsec_oracle"])
+nsec_oracle_ext.include_router(nsec_oracle_generic_router)
+nsec_oracle_ext.include_router(nsec_oracle_api_router)
 
 scheduled_tasks: list[asyncio.Task] = []
 
 
-def nsecbunker_stop():
+def nsec_oracle_stop():
     for task in scheduled_tasks:
         try:
             task.cancel()
@@ -30,18 +30,18 @@ def nsecbunker_stop():
             pass
 
 
-def nsecbunker_start():
+def nsec_oracle_start():
     scheduled_tasks.append(
         create_permanent_unique_task(
-            "ext_nsecbunker_log_cleanup", cleanup_old_signing_logs
+            "ext_nsec_oracle_log_cleanup", cleanup_old_signing_logs
         )
     )
 
 
 __all__ = [
     "db",
-    "nsecbunker_ext",
-    "nsecbunker_start",
-    "nsecbunker_static_files",
-    "nsecbunker_stop",
+    "nsec_oracle_ext",
+    "nsec_oracle_start",
+    "nsec_oracle_static_files",
+    "nsec_oracle_stop",
 ]

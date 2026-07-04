@@ -1,13 +1,13 @@
-# Nsec Bunker
+# Nsec Oracle
 
-A server-side Nostr **signing oracle** for [LNbits](https://github.com/lnbits/lnbits). Nsec Bunker keeps Nostr private keys on your instance and lets other LNbits extensions — and admin-key API clients — sign events and encrypt/decrypt messages through per-key, per-kind permissions with rate limits and an audit log, without ever exposing the key.
+A server-side Nostr **signing oracle** for [LNbits](https://github.com/lnbits/lnbits). Nsec Oracle keeps Nostr private keys on your instance and lets other LNbits extensions — and admin-key API clients — sign events and encrypt/decrypt messages through per-key, per-kind permissions with rate limits and an audit log, without ever exposing the key.
 
-> **Scope:** Nsec Bunker is for **in-instance signing** — extensions and API clients that run on your LNbits. It is *not* a relay-facing remote signer for external Nostr apps. To serve external clients over `bunker://` / `nostrconnect://`, use the dedicated [`nostr_bunker`](https://github.com/lnbits/nostr_bunker) extension; the two are complementary.
+> **Scope:** Nsec Oracle is for **in-instance signing** — extensions and API clients that run on your LNbits. It is *not* a relay-facing remote signer for external Nostr apps. To serve external clients over `bunker://` / `nostrconnect://`, use the dedicated [`nostr_bunker`](https://github.com/lnbits/nostr_bunker) extension; the two are complementary.
 
 ## Use Cases
 
 - **Centralized key management** -- Keep one (or several) Nostr identities on your LNbits instance instead of pasting nsecs into every extension that needs to publish events.
-- **Extension signing oracle** -- Extensions like CyberHerd, Split Payments, or LNURLp request signing through the Bunker's internal Python API. They never see the private key.
+- **Extension signing oracle** -- Extensions like CyberHerd, Split Payments, or LNURLp request signing through the oracle's internal Python API. They never see the private key.
 - **External API consumer** -- Any HTTP client with a valid admin wallet key can call the REST endpoints to sign events or encrypt/decrypt messages; invoice wallet keys can retrieve public keys.
 - **NIP-04 / NIP-44 encrypted messaging** -- Encrypt and decrypt direct messages without exposing keys to the calling application.
 - **Key backup and migration** -- Export a key as hex or nsec via the admin-only export endpoint, then import it on another instance.
@@ -15,7 +15,7 @@ A server-side Nostr **signing oracle** for [LNbits](https://github.com/lnbits/ln
 
 ## Quick Start
 
-1. Enable the **Nsec Bunker** extension in your LNbits instance.
+1. Enable the **Nsec Oracle** extension in your LNbits instance.
 2. Open the extension UI and select a wallet.
 3. **Generate** a new keypair or **Import** an existing nsec / hex private key.
 4. Optionally add a **label** to the key for easier identification.
@@ -25,7 +25,7 @@ Keys are encrypted at rest using the LNbits server secret. The plaintext private
 
 ## API Reference
 
-All endpoints are prefixed with `/nsecbunker`. Authentication uses LNbits wallet keys passed in the `X-Api-Key` header.
+All endpoints are prefixed with `/nsec_oracle`. Authentication uses LNbits wallet keys passed in the `X-Api-Key` header.
 
 ### Keys (admin key required)
 
@@ -141,10 +141,10 @@ Returns `{"data": [...], "total": N}`.
 
 ## Internal Python API
 
-Other LNbits extensions can call the Bunker directly without going through HTTP:
+Other LNbits extensions can call the oracle directly without going through HTTP:
 
 ```python
-from lnbits.extensions.nsecbunker.services import sign_event
+from lnbits.extensions.nsec_oracle.services import sign_event
 
 signed = await sign_event(
     wallet_id="...",
@@ -160,7 +160,7 @@ The same pattern works for `nip04_encrypt`, `nip04_decrypt`, `nip44_encrypt`, `n
 
 ## Extension Discovery
 
-Extensions can declare their signing needs in `config.json` so that Nsec Bunker's Quick Setup can detect them automatically:
+Extensions can declare their signing needs in `config.json` so that Nsec Oracle's Quick Setup can detect them automatically:
 
 ```json
 {

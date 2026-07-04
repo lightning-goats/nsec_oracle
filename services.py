@@ -47,7 +47,7 @@ async def sign_event(
     key_id: str | None = None,
 ) -> dict:
     """
-    Sign a Nostr event using the Bunker.
+    Sign a Nostr event using the oracle.
 
     Args:
         wallet_id: LNBits wallet ID
@@ -151,7 +151,7 @@ async def sign_event(
     else:
         await create_signing_log(key.id, extension_id, kind, event_id)
     logger.info(
-        f"nsecbunker: signed kind:{kind} for {extension_id} "
+        f"nsec_oracle: signed kind:{kind} for {extension_id} "
         f"(key {key.id[:8]}..., event {event_id[:12]}...)"
     )
 
@@ -191,7 +191,7 @@ async def nip04_encrypt(
     pk = NsPK.parse(recipient_pubkey)
     result = _nip04_enc(sk, pk, plaintext)
     logger.info(
-        f"nsecbunker: nip04_encrypt for key {key.id[:8]}..."
+        f"nsec_oracle: nip04_encrypt for key {key.id[:8]}..."
     )
     return result
 
@@ -207,7 +207,7 @@ async def nip04_decrypt(
     pk = NsPK.parse(sender_pubkey)
     result = _nip04_dec(sk, pk, ciphertext)
     logger.info(
-        f"nsecbunker: nip04_decrypt for key {key.id[:8]}..."
+        f"nsec_oracle: nip04_decrypt for key {key.id[:8]}..."
     )
     return result
 
@@ -223,7 +223,7 @@ async def nip44_encrypt(
     pk = NsPK.parse(recipient_pubkey)
     result = _nip44_enc(sk, pk, plaintext, Nip44Version.V2)
     logger.info(
-        f"nsecbunker: nip44_encrypt for key {key.id[:8]}..."
+        f"nsec_oracle: nip44_encrypt for key {key.id[:8]}..."
     )
     return result
 
@@ -239,6 +239,6 @@ async def nip44_decrypt(
     pk = NsPK.parse(sender_pubkey)
     result = _nip44_dec(sk, pk, payload)
     logger.info(
-        f"nsecbunker: nip44_decrypt for key {key.id[:8]}..."
+        f"nsec_oracle: nip44_decrypt for key {key.id[:8]}..."
     )
     return result

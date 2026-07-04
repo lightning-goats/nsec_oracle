@@ -9,7 +9,7 @@ from pydantic import ValidationError
 def _load_models_module():
     models_path = Path(__file__).resolve().parents[1] / "models.py"
     spec = importlib.util.spec_from_file_location(
-        "nsecbunker_models_under_test", models_path
+        "nsec_oracle_models_under_test", models_path
     )
     module = importlib.util.module_from_spec(spec)
     assert spec is not None and spec.loader is not None
@@ -17,10 +17,10 @@ def _load_models_module():
     return module
 
 
-def test_bunker_key_dict_keeps_database_secret_fields():
+def test_oracle_key_dict_keeps_database_secret_fields():
     models = _load_models_module()
 
-    key = models.BunkerKey(
+    key = models.OracleKey(
         id="key-1",
         wallet="wallet-1",
         pubkey_hex="pubkey-1",
@@ -34,10 +34,10 @@ def test_bunker_key_dict_keeps_database_secret_fields():
     assert "stored" not in payload
 
 
-def test_public_bunker_key_strips_secret_and_reports_storage_state():
+def test_public_oracle_key_strips_secret_and_reports_storage_state():
     models = _load_models_module()
 
-    key = models.BunkerKey(
+    key = models.OracleKey(
         id="key-1",
         wallet="wallet-1",
         pubkey_hex="pubkey-1",
@@ -45,7 +45,7 @@ def test_public_bunker_key_strips_secret_and_reports_storage_state():
         created_at=datetime.now(timezone.utc),
     )
 
-    payload = models.PublicBunkerKey.from_bunker_key(key).dict()
+    payload = models.PublicOracleKey.from_oracle_key(key).dict()
 
     assert payload["stored"] is True
     assert "encrypted_nsec" not in payload

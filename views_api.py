@@ -27,15 +27,15 @@ from .crud import (
 from .discovery import discover_signing_requirements
 from .helpers import parse_nostr_private_key
 from .models import (
-    BunkerKey,
-    BunkerPermission,
     CreateKeyData,
     CreatePermissionData,
     Nip04DecryptData,
     Nip04EncryptData,
     Nip44DecryptData,
     Nip44EncryptData,
-    PublicBunkerKey,
+    OracleKey,
+    OraclePermission,
+    PublicOracleKey,
     QuickSetupData,
     SignEventData,
     UpdateKeyData,
@@ -50,14 +50,14 @@ from .services import (
     sign_event,
 )
 
-nsecbunker_api_router = APIRouter()
+nsec_oracle_api_router = APIRouter()
 
 
-def _public_key(key: BunkerKey) -> PublicBunkerKey:
-    return PublicBunkerKey.from_bunker_key(key)
+def _public_key(key: OracleKey) -> PublicOracleKey:
+    return PublicOracleKey.from_oracle_key(key)
 
 
-async def _require_owned_key(wallet_id: str, key_id: str) -> BunkerKey:
+async def _require_owned_key(wallet_id: str, key_id: str) -> OracleKey:
     key = await get_key(key_id)
     if not key or key.wallet != wallet_id:
         raise HTTPException(
@@ -69,13 +69,13 @@ async def _require_owned_key(wallet_id: str, key_id: str) -> BunkerKey:
 # --- Keys ---
 
 
-@nsecbunker_api_router.post(
+@nsec_oracle_api_router.post(
     "/api/v1/keys", status_code=HTTPStatus.CREATED
 )
 async def api_create_key(
     data: CreateKeyData,
     wallet: WalletTypeInfo = Depends(require_admin_key),
-) -> PublicBunkerKey:
+) -> PublicOracleKey:
     try:
         parse_nostr_private_key(data.private_key)
     except Exception as exc:
@@ -88,15 +88,15 @@ async def api_create_key(
     return _public_key(key)
 
 
-@nsecbunker_api_router.get("/api/v1/keys")
+@nsec_oracle_api_router.get("/api/v1/keys")
 async def api_get_keys(
     wallet: WalletTypeInfo = Depends(require_admin_key),
-) -> list[PublicBunkerKey]:
+) -> list[PublicOracleKey]:
     keys = await get_keys(wallet.wallet.id)
     return [_public_key(key) for key in keys]
 
 
-@nsecbunker_api_router.delete(
+@nsec_oracle_api_router.delete(
     "/api/v1/keys/{key_id}", status_code=HTTPStatus.OK
 )
 async def api_delete_key(
@@ -120,26 +120,26 @@ async def api_delete_key(
 # --- Keys: Generate ---
 
 
-@nsecbunker_api_router.post(
+@nsec_oracle_api_router.post(
     "/api/v1/keys/generate", status_code=HTTPStatus.CREATED
 )
 async def api_generate_key(
     wallet: WalletTypeInfo = Depends(require_admin_key),
-) -> PublicBunkerKey:
+) -> PublicOracleKey:
     private_key = PrivateKey()
     data = CreateKeyData(private_key=private_key.hex())
     key = await create_key(wallet.wallet.id, data)
     return _public_key(key)
 
 
-@nsecbunker_api_router.put(
+@nsec_oracle_api_router.put(
     "/api/v1/keys/{key_id}", status_code=HTTPStatus.OK
 )
 async def api_update_key(
     key_id: str,
     data: UpdateKeyData,
     wallet: WalletTypeInfo = Depends(require_admin_key),
-) -> PublicBunkerKey:
+) -> PublicOracleKey:
     key = await get_key(key_id)
     if not key:
         raise HTTPException(
@@ -153,7 +153,7 @@ async def api_update_key(
     return _public_key(updated)
 
 
-@nsecbunker_api_router.get(
+@nsec_oracle_api_router.get(
     "/api/v1/keys/{key_id}/export", status_code=HTTPStatus.OK
 )
 async def api_export_key(
@@ -173,7 +173,7 @@ async def api_export_key(
     # Exporting the raw private key is the single most sensitive operation in
     # the vault — always leave an audit trail.
     logger.warning(
-        f"nsecbunker: private key EXPORTED for key {key_id[:8]}... "
+        f"nsec_oracle: private key EXPORTED for key {key_id[:8]}... "
         f"(wallet {wallet.wallet.id[:8]}..., pubkey {key.pubkey_hex[:12]}...)"
     )
     pk = PrivateKey(bytes.fromhex(private_key_hex))
@@ -183,13 +183,13 @@ async def api_export_key(
 # --- Permissions ---
 
 
-@nsecbunker_api_router.post(
+@nsec_oracle_api_router.post(
     "/api/v1/permissions", status_code=HTTPStatus.CREATED
 )
 async def api_create_permission(
     data: CreatePermissionData,
     wallet: WalletTypeInfo = Depends(require_admin_key),
-) -> BunkerPermission:
+) -> OraclePermission:
     try:
         return await create_permission(wallet.wallet.id, data)
     except LookupError as exc:
@@ -198,21 +198,21 @@ async def api_create_permission(
         ) from exc
 
 
-@nsecbunker_api_router.get("/api/v1/permissions")
+@nsec_oracle_api_router.get("/api/v1/permissions")
 async def api_get_permissions(
     wallet: WalletTypeInfo = Depends(require_admin_key),
-) -> list[BunkerPermission]:
+) -> list[OraclePermission]:
     return await get_permissions(wallet.wallet.id)
 
 
-@nsecbunker_api_router.put(
+@nsec_oracle_api_router.put(
     "/api/v1/permissions/{perm_id}", status_code=HTTPStatus.OK
 )
 async def api_update_permission(
     perm_id: str,
     data: UpdatePermissionData,
     wallet: WalletTypeInfo = Depends(require_admin_key),
-) -> BunkerPermission:
+) -> OraclePermission:
     perm = await get_permission(perm_id)
     if not perm:
         raise HTTPException(
@@ -225,7 +225,7 @@ async def api_update_permission(
     return await update_permission(perm_id, data)
 
 
-@nsecbunker_api_router.delete(
+@nsec_oracle_api_router.delete(
     "/api/v1/permissions/{perm_id}", status_code=HTTPStatus.OK
 )
 async def api_delete_permission(
@@ -247,7 +247,7 @@ async def api_delete_permission(
 # --- Discovery & Quick Setup ---
 
 
-@nsecbunker_api_router.get("/api/v1/discover")
+@nsec_oracle_api_router.get("/api/v1/discover")
 async def api_discover(
     wallet: WalletTypeInfo = Depends(require_admin_key),
 ) -> list[dict]:
@@ -288,13 +288,13 @@ async def api_discover(
     return result
 
 
-@nsecbunker_api_router.post(
+@nsec_oracle_api_router.post(
     "/api/v1/quick-setup", status_code=HTTPStatus.CREATED
 )
 async def api_quick_setup(
     data: QuickSetupData,
     wallet: WalletTypeInfo = Depends(require_admin_key),
-) -> list[BunkerPermission]:
+) -> list[OraclePermission]:
     await _require_owned_key(wallet.wallet.id, data.key_id)
 
     discovered = await run_in_threadpool(discover_signing_requirements)
@@ -312,7 +312,7 @@ async def api_quick_setup(
         (p.extension_id, p.kind) for p in existing if p.key_id == data.key_id
     }
 
-    created: list[BunkerPermission] = []
+    created: list[OraclePermission] = []
     for req in ext_info.requirements:
         if (data.extension_id, req.kind) in granted_set:
             continue
@@ -339,7 +339,7 @@ async def api_quick_setup(
 # --- Public Key ---
 
 
-@nsecbunker_api_router.get("/api/v1/pubkey")
+@nsec_oracle_api_router.get("/api/v1/pubkey")
 async def api_get_pubkey(
     key_id: str | None = None,
     wallet: WalletTypeInfo = Depends(require_invoice_key),
@@ -356,7 +356,7 @@ async def api_get_pubkey(
 # --- NIP-04 ---
 
 
-@nsecbunker_api_router.post("/api/v1/nip04/encrypt")
+@nsec_oracle_api_router.post("/api/v1/nip04/encrypt")
 async def api_nip04_encrypt(
     data: Nip04EncryptData,
     wallet: WalletTypeInfo = Depends(require_admin_key),
@@ -375,14 +375,14 @@ async def api_nip04_encrypt(
             status_code=HTTPStatus.SERVICE_UNAVAILABLE, detail=str(exc)
         ) from exc
     except Exception as exc:
-        logger.error(f"nsecbunker: nip04_encrypt failed: {exc}")
+        logger.error(f"nsec_oracle: nip04_encrypt failed: {exc}")
         raise HTTPException(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             detail="Encryption failed.",
         ) from exc
 
 
-@nsecbunker_api_router.post("/api/v1/nip04/decrypt")
+@nsec_oracle_api_router.post("/api/v1/nip04/decrypt")
 async def api_nip04_decrypt(
     data: Nip04DecryptData,
     wallet: WalletTypeInfo = Depends(require_admin_key),
@@ -401,7 +401,7 @@ async def api_nip04_decrypt(
             status_code=HTTPStatus.SERVICE_UNAVAILABLE, detail=str(exc)
         ) from exc
     except Exception as exc:
-        logger.error(f"nsecbunker: nip04_decrypt failed: {exc}")
+        logger.error(f"nsec_oracle: nip04_decrypt failed: {exc}")
         raise HTTPException(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             detail="Decryption failed.",
@@ -411,7 +411,7 @@ async def api_nip04_decrypt(
 # --- NIP-44 ---
 
 
-@nsecbunker_api_router.post("/api/v1/nip44/encrypt")
+@nsec_oracle_api_router.post("/api/v1/nip44/encrypt")
 async def api_nip44_encrypt(
     data: Nip44EncryptData,
     wallet: WalletTypeInfo = Depends(require_admin_key),
@@ -430,14 +430,14 @@ async def api_nip44_encrypt(
             status_code=HTTPStatus.SERVICE_UNAVAILABLE, detail=str(exc)
         ) from exc
     except Exception as exc:
-        logger.error(f"nsecbunker: nip44_encrypt failed: {exc}")
+        logger.error(f"nsec_oracle: nip44_encrypt failed: {exc}")
         raise HTTPException(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             detail="Encryption failed.",
         ) from exc
 
 
-@nsecbunker_api_router.post("/api/v1/nip44/decrypt")
+@nsec_oracle_api_router.post("/api/v1/nip44/decrypt")
 async def api_nip44_decrypt(
     data: Nip44DecryptData,
     wallet: WalletTypeInfo = Depends(require_admin_key),
@@ -456,7 +456,7 @@ async def api_nip44_decrypt(
             status_code=HTTPStatus.SERVICE_UNAVAILABLE, detail=str(exc)
         ) from exc
     except Exception as exc:
-        logger.error(f"nsecbunker: nip44_decrypt failed: {exc}")
+        logger.error(f"nsec_oracle: nip44_decrypt failed: {exc}")
         raise HTTPException(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             detail="Decryption failed.",
@@ -466,7 +466,7 @@ async def api_nip44_decrypt(
 # --- Sign ---
 
 
-@nsecbunker_api_router.post("/api/v1/sign")
+@nsec_oracle_api_router.post("/api/v1/sign")
 async def api_sign_event(
     data: SignEventData,
     wallet: WalletTypeInfo = Depends(require_admin_key),
@@ -496,7 +496,7 @@ async def api_sign_event(
             detail=detail,
         ) from exc
     except Exception as exc:
-        logger.error(f"nsecbunker: sign_event failed: {exc}")
+        logger.error(f"nsec_oracle: sign_event failed: {exc}")
         raise HTTPException(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             detail="Signing failed.",
@@ -506,7 +506,7 @@ async def api_sign_event(
 # --- Signing Log ---
 
 
-@nsecbunker_api_router.get("/api/v1/log")
+@nsec_oracle_api_router.get("/api/v1/log")
 async def api_get_logs(
     offset: int = 0,
     limit: int = 50,

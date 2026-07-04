@@ -13,8 +13,8 @@ async def cleanup_old_signing_logs():
         try:
             await asyncio.sleep(LOG_CLEANUP_INTERVAL)
             await delete_old_signing_logs(LOG_RETENTION_DAYS)
-            logger.debug("nsecbunker: signing log cleanup complete")
+            logger.debug("nsec_oracle: signing log cleanup complete")
         except asyncio.CancelledError:
             break
         except Exception as exc:
-            logger.warning(f"nsecbunker: log cleanup error: {exc}")
+            logger.warning(f"nsec_oracle: log cleanup error: {exc}")

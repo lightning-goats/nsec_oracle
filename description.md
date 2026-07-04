@@ -1,6 +1,6 @@
-# Nsec Bunker
+# Nsec Oracle
 
-Nsec Bunker is a server-side Nostr **signing oracle** for LNbits. It keeps private keys encrypted with the LNbits server secret and lets other installed extensions — and admin-key API clients — sign and encrypt/decrypt through narrowly scoped permissions, without ever exposing the key.
+Nsec Oracle is a server-side Nostr **signing oracle** for LNbits. It keeps private keys encrypted with the LNbits server secret and lets other installed extensions — and admin-key API clients — sign and encrypt/decrypt through narrowly scoped permissions, without ever exposing the key.
 
 It is for **in-instance** signing, not relay-facing remote signing for external Nostr apps. For external `bunker://` / `nostrconnect://` clients, use the dedicated `nostr_bunker` extension — the two are complementary.
 

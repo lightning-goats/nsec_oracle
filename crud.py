@@ -11,28 +11,28 @@ from lnbits.helpers import (
 
 from .helpers import parse_nostr_private_key
 from .models import (
-    BunkerKey,
-    BunkerPermission,
     CreateKeyData,
     CreatePermissionData,
+    OracleKey,
+    OraclePermission,
     SigningLog,
     UpdateKeyData,
     UpdatePermissionData,
 )
 
-db = Database("ext_nsecbunker")
+db = Database("ext_nsec_oracle")
 
 
 # --- Keys ---
 
 
-async def create_key(wallet_id: str, data: CreateKeyData) -> BunkerKey:
+async def create_key(wallet_id: str, data: CreateKeyData) -> OracleKey:
     private_key = parse_nostr_private_key(data.private_key)
     private_key_hex = private_key.hex()
     pubkey_hex = private_key.public_key.hex()
     encrypted_nsec = encrypt_internal_message(private_key_hex)
 
-    key = BunkerKey(
+    key = OracleKey(
         id=urlsafe_short_hash(),
         wallet=wallet_id,
         pubkey_hex=pubkey_hex,
@@ -40,40 +40,40 @@ async def create_key(wallet_id: str, data: CreateKeyData) -> BunkerKey:
         label=data.label,
         created_at=datetime.now(timezone.utc),
     )
-    await db.insert("nsecbunker.keys", key)
+    await db.insert("nsec_oracle.keys", key)
     return key
 
 
-async def get_keys(wallet_id: str) -> list[BunkerKey]:
+async def get_keys(wallet_id: str) -> list[OracleKey]:
     return await db.fetchall(
-        "SELECT * FROM nsecbunker.keys WHERE wallet = :wallet "
+        "SELECT * FROM nsec_oracle.keys WHERE wallet = :wallet "
         "ORDER BY created_at DESC",
         {"wallet": wallet_id},
-        BunkerKey,
+        OracleKey,
     )
 
 
-async def get_key(key_id: str) -> BunkerKey | None:
+async def get_key(key_id: str) -> OracleKey | None:
     return await db.fetchone(
-        "SELECT * FROM nsecbunker.keys WHERE id = :id",
+        "SELECT * FROM nsec_oracle.keys WHERE id = :id",
         {"id": key_id},
-        BunkerKey,
+        OracleKey,
     )
 
 
 async def delete_key(key_id: str) -> None:
     await db.execute(
-        "DELETE FROM nsecbunker.keys WHERE id = :id",
+        "DELETE FROM nsec_oracle.keys WHERE id = :id",
         {"id": key_id},
     )
 
 
-async def update_key(key_id: str, data: UpdateKeyData) -> BunkerKey:
+async def update_key(key_id: str, data: UpdateKeyData) -> OracleKey:
     key = await get_key(key_id)
     if not key:
         raise LookupError(f"Key {key_id} not found")
     await db.execute(
-        "UPDATE nsecbunker.keys SET label = :label WHERE id = :id",
+        "UPDATE nsec_oracle.keys SET label = :label WHERE id = :id",
         {"id": key_id, "label": data.label},
     )
     updated = await get_key(key_id)
@@ -97,12 +97,12 @@ async def get_decrypted_private_key(key_id: str) -> str:
 
 async def create_permission(
     wallet_id: str, data: CreatePermissionData
-) -> BunkerPermission:
+) -> OraclePermission:
     key = await get_key(data.key_id)
     if not key or key.wallet != wallet_id:
         raise LookupError(f"Key {data.key_id} not found for wallet")
 
-    perm = BunkerPermission(
+    perm = OraclePermission(
         id=urlsafe_short_hash(),
         wallet=wallet_id,
         extension_id=data.extension_id,
@@ -112,47 +112,47 @@ async def create_permission(
         rate_limit_seconds=data.rate_limit_seconds,
         created_at=datetime.now(timezone.utc),
     )
-    await db.insert("nsecbunker.permissions", perm)
+    await db.insert("nsec_oracle.permissions", perm)
     return perm
 
 
-async def get_permissions(wallet_id: str) -> list[BunkerPermission]:
+async def get_permissions(wallet_id: str) -> list[OraclePermission]:
     return await db.fetchall(
-        "SELECT * FROM nsecbunker.permissions WHERE wallet = :wallet "
+        "SELECT * FROM nsec_oracle.permissions WHERE wallet = :wallet "
         "ORDER BY created_at DESC",
         {"wallet": wallet_id},
-        BunkerPermission,
+        OraclePermission,
     )
 
 
-async def get_permission(perm_id: str) -> BunkerPermission | None:
+async def get_permission(perm_id: str) -> OraclePermission | None:
     return await db.fetchone(
-        "SELECT * FROM nsecbunker.permissions WHERE id = :id",
+        "SELECT * FROM nsec_oracle.permissions WHERE id = :id",
         {"id": perm_id},
-        BunkerPermission,
+        OraclePermission,
     )
 
 
 async def get_permission_for_signing(
     wallet_id: str, extension_id: str, kind: int
-) -> BunkerPermission | None:
+) -> OraclePermission | None:
     return await db.fetchone(
-        "SELECT * FROM nsecbunker.permissions "
+        "SELECT * FROM nsec_oracle.permissions "
         "WHERE wallet = :wallet AND extension_id = :extension_id "
         "AND kind = :kind",
         {"wallet": wallet_id, "extension_id": extension_id, "kind": kind},
-        BunkerPermission,
+        OraclePermission,
     )
 
 
 async def update_permission(
     perm_id: str, data: UpdatePermissionData
-) -> BunkerPermission:
+) -> OraclePermission:
     perm = await get_permission(perm_id)
     if not perm:
         raise LookupError(f"Permission {perm_id} not found")
     await db.execute(
-        "UPDATE nsecbunker.permissions "
+        "UPDATE nsec_oracle.permissions "
         "SET rate_limit_count = :rate_limit_count, "
         "rate_limit_seconds = :rate_limit_seconds "
         "WHERE id = :id",
@@ -169,14 +169,14 @@ async def update_permission(
 
 async def delete_permission(perm_id: str) -> None:
     await db.execute(
-        "DELETE FROM nsecbunker.permissions WHERE id = :id",
+        "DELETE FROM nsec_oracle.permissions WHERE id = :id",
         {"id": perm_id},
     )
 
 
 async def delete_permissions_for_key(key_id: str) -> None:
     await db.execute(
-        "DELETE FROM nsecbunker.permissions WHERE key_id = :key_id",
+        "DELETE FROM nsec_oracle.permissions WHERE key_id = :key_id",
         {"key_id": key_id},
     )
 
@@ -195,7 +195,7 @@ async def create_signing_log(
         event_id=event_id,
         created_at=datetime.now(timezone.utc),
     )
-    await db.insert("nsecbunker.signing_log", log)
+    await db.insert("nsec_oracle.signing_log", log)
     return log
 
 
@@ -235,7 +235,7 @@ async def create_rate_limited_signing_log(
             lock_result = await conn.conn.execute(
                 text(
                     conn.rewrite_query(
-                        "UPDATE nsecbunker.permissions SET id = id WHERE id = :id"
+                        "UPDATE nsec_oracle.permissions SET id = id WHERE id = :id"
                     )
                 ),
                 conn.rewrite_values({"id": permission_id}),
@@ -246,7 +246,7 @@ async def create_rate_limited_signing_log(
             count_result = await conn.conn.execute(
                 text(
                     conn.rewrite_query(
-                        "SELECT COUNT(*) FROM nsecbunker.signing_log "  # noqa: S608
+                        "SELECT COUNT(*) FROM nsec_oracle.signing_log "  # noqa: S608
                         "WHERE key_id = :key_id AND extension_id = :extension_id "
                         "AND kind = :kind AND created_at > "
                         f"{db.timestamp_placeholder('cutoff_ts')}"
@@ -268,7 +268,7 @@ async def create_rate_limited_signing_log(
             await conn.conn.execute(
                 text(
                     conn.rewrite_query(
-                        "INSERT INTO nsecbunker.signing_log "
+                        "INSERT INTO nsec_oracle.signing_log "
                         "(id, key_id, extension_id, kind, event_id, created_at) "
                         "VALUES (:id, :key_id, :extension_id, :kind, "
                         ":event_id, :created_at)"
@@ -284,8 +284,8 @@ async def get_signing_logs(
     wallet_id: str, limit: int = 50, offset: int = 0
 ) -> list[SigningLog]:
     return await db.fetchall(
-        "SELECT sl.* FROM nsecbunker.signing_log sl "
-        "JOIN nsecbunker.keys k ON sl.key_id = k.id "
+        "SELECT sl.* FROM nsec_oracle.signing_log sl "
+        "JOIN nsec_oracle.keys k ON sl.key_id = k.id "
         "WHERE k.wallet = :wallet "
         "ORDER BY sl.created_at DESC LIMIT :limit OFFSET :offset",
         {"wallet": wallet_id, "limit": limit, "offset": offset},
@@ -295,8 +295,8 @@ async def get_signing_logs(
 
 async def count_signing_logs(wallet_id: str) -> int:
     result = await db.fetchone(
-        "SELECT COUNT(*) as count FROM nsecbunker.signing_log sl "
-        "JOIN nsecbunker.keys k ON sl.key_id = k.id "
+        "SELECT COUNT(*) as count FROM nsec_oracle.signing_log sl "
+        "JOIN nsec_oracle.keys k ON sl.key_id = k.id "
         "WHERE k.wallet = :wallet",
         {"wallet": wallet_id},
     )
@@ -308,7 +308,7 @@ async def delete_old_signing_logs(retention_days: int = 30) -> None:
 
     cutoff_ts = int(time.time() - retention_days * 86400)
     await db.execute(
-        f"DELETE FROM nsecbunker.signing_log "  # noqa: S608
+        f"DELETE FROM nsec_oracle.signing_log "  # noqa: S608
         f"WHERE created_at < {db.timestamp_placeholder('cutoff_ts')}",
         {"cutoff_ts": cutoff_ts},
     )

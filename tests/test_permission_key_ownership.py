@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 
 def _load_crud_module():
-    package_name = "nsecbunker_crud_testpkg"
+    package_name = "nsec_oracle_crud_testpkg"
     base_path = Path(__file__).resolve().parents[1]
 
     package = types.ModuleType(package_name)

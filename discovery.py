@@ -29,7 +29,7 @@ class ExtensionSigningInfo(BaseModel):
 def discover_signing_requirements() -> list[ExtensionSigningInfo]:
     extensions_dir = Path(settings.lnbits_extensions_path, "extensions")
     if not extensions_dir.is_dir():
-        logger.warning(f"nsecbunker: extensions directory not found: {extensions_dir}")
+        logger.warning(f"nsec_oracle: extensions directory not found: {extensions_dir}")
         return []
 
     results: list[ExtensionSigningInfo] = []
@@ -37,7 +37,7 @@ def discover_signing_requirements() -> list[ExtensionSigningInfo]:
     for entry in sorted(extensions_dir.iterdir()):
         if not entry.is_dir():
             continue
-        if entry.name == "nsecbunker":
+        if entry.name == "nsec_oracle":
             continue
 
         config_path = entry / "config.json"
@@ -48,7 +48,7 @@ def discover_signing_requirements() -> list[ExtensionSigningInfo]:
             with open(config_path) as f:
                 config = json.load(f)
         except (json.JSONDecodeError, OSError) as exc:
-            logger.debug(f"nsecbunker: skipping {entry.name}/config.json: {exc}")
+            logger.debug(f"nsec_oracle: skipping {entry.name}/config.json: {exc}")
             continue
 
         nostr_signing = config.get("nostr_signing")
@@ -59,7 +59,7 @@ def discover_signing_requirements() -> list[ExtensionSigningInfo]:
             requirements = [SigningRequirement(**item) for item in nostr_signing]
         except Exception as exc:
             logger.warning(
-                f"nsecbunker: invalid nostr_signing in {entry.name}: {exc}"
+                f"nsec_oracle: invalid nostr_signing in {entry.name}: {exc}"
             )
             continue
 

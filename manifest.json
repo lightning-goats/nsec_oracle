@@ -1,9 +1,9 @@
 {
   "repos": [
     {
-      "id": "nsecbunker",
+      "id": "nsec_oracle",
       "organisation": "lightning-goats",
-      "repository": "nsecbunker"
+      "repository": "nsec_oracle"
     }
   ]
 }

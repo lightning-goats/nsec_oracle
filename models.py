@@ -22,7 +22,7 @@ def _validate_rate_limit_pair(values: dict, require_update: bool = False) -> dic
 
 
 
-class BunkerKey(BaseModel):
+class OracleKey(BaseModel):
     class Config:
         extra = "ignore"
 
@@ -34,7 +34,7 @@ class BunkerKey(BaseModel):
     created_at: datetime
 
 
-class PublicBunkerKey(BaseModel):
+class PublicOracleKey(BaseModel):
     id: str
     wallet: str
     pubkey_hex: str
@@ -43,7 +43,7 @@ class PublicBunkerKey(BaseModel):
     stored: bool
 
     @classmethod
-    def from_bunker_key(cls, key: BunkerKey) -> "PublicBunkerKey":
+    def from_oracle_key(cls, key: OracleKey) -> "PublicOracleKey":
         return cls(
             id=key.id,
             wallet=key.wallet,
@@ -54,7 +54,7 @@ class PublicBunkerKey(BaseModel):
         )
 
 
-class BunkerPermission(BaseModel):
+class OraclePermission(BaseModel):
     class Config:
         extra = "ignore"
 

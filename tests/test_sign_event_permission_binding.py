@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 
 def _load_services_module():
-    package_name = "nsecbunker_testpkg"
+    package_name = "nsec_oracle_testpkg"
     module_name = f"{package_name}.services"
     services_path = Path(__file__).resolve().parents[1] / "services.py"
 

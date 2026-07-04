@@ -2,17 +2,17 @@ import asyncio
 from datetime import datetime, timezone
 
 from lnbits.db import Database
-from lnbits.extensions.nsecbunker import crud
+from lnbits.extensions.nsec_oracle import crud
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
 
 def test_rate_limit_check_and_log_are_one_database_operation(tmp_path):
     async def run_test():
-        test_db = Database("ext_nsecbunker_rate_limit_test")
+        test_db = Database("ext_nsec_oracle_rate_limit_test")
         await test_db.engine.dispose()
         test_db.path = str(tmp_path / "rate-limit.sqlite3")
-        test_db.schema = "nsecbunker"
+        test_db.schema = "nsec_oracle"
         test_db.engine = create_async_engine(
             "sqlite+aiosqlite:///:memory:",
             poolclass=NullPool,
@@ -23,7 +23,7 @@ def test_rate_limit_check_and_log_are_one_database_operation(tmp_path):
         try:
             await test_db.execute(
                 """
-                CREATE TABLE nsecbunker.permissions (
+                CREATE TABLE nsec_oracle.permissions (
                     id TEXT PRIMARY KEY,
                     wallet TEXT NOT NULL,
                     extension_id TEXT NOT NULL,
@@ -37,7 +37,7 @@ def test_rate_limit_check_and_log_are_one_database_operation(tmp_path):
             )
             await test_db.execute(
                 """
-                CREATE TABLE nsecbunker.signing_log (
+                CREATE TABLE nsec_oracle.signing_log (
                     id TEXT PRIMARY KEY,
                     key_id TEXT NOT NULL,
                     extension_id TEXT NOT NULL,
@@ -49,7 +49,7 @@ def test_rate_limit_check_and_log_are_one_database_operation(tmp_path):
             )
             await test_db.execute(
                 """
-                INSERT INTO nsecbunker.permissions
+                INSERT INTO nsec_oracle.permissions
                     (id, wallet, extension_id, key_id, kind,
                      rate_limit_count, rate_limit_seconds, created_at)
                 VALUES
@@ -87,7 +87,7 @@ def test_rate_limit_check_and_log_are_one_database_operation(tmp_path):
                 60,
             )
             row = await test_db.fetchone(
-                "SELECT COUNT(*) AS count FROM nsecbunker.signing_log"
+                "SELECT COUNT(*) AS count FROM nsec_oracle.signing_log"
             )
 
             assert first is not None
@@ -123,7 +123,7 @@ def test_postgres_atomic_insert_binds_datetime(monkeypatch):
             return Transaction()
 
         async def execute(self, statement, values):
-            if str(statement).startswith("INSERT INTO nsecbunker.signing_log"):
+            if str(statement).startswith("INSERT INTO nsec_oracle.signing_log"):
                 self.inserted_values = values
             return Result()
 

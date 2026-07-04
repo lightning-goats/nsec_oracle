@@ -204,7 +204,7 @@ window.app = Vue.createApp({
       LNbits.api
         .request(
           'GET',
-          '/nsecbunker/api/v1/discover',
+          '/nsec_oracle/api/v1/discover',
           this.selectedWallet.adminkey
         )
         .then(response => {
@@ -225,7 +225,7 @@ window.app = Vue.createApp({
       LNbits.api
         .request(
           'POST',
-          '/nsecbunker/api/v1/quick-setup',
+          '/nsec_oracle/api/v1/quick-setup',
           this.selectedWallet.adminkey,
           {
             extension_id: extId,
@@ -262,7 +262,7 @@ window.app = Vue.createApp({
       LNbits.api
         .request(
           'GET',
-          '/nsecbunker/api/v1/keys',
+          '/nsec_oracle/api/v1/keys',
           this.selectedWallet.adminkey
         )
         .then(response => {
@@ -276,7 +276,7 @@ window.app = Vue.createApp({
       LNbits.api
         .request(
           'POST',
-          '/nsecbunker/api/v1/keys',
+          '/nsec_oracle/api/v1/keys',
           this.selectedWallet.adminkey,
           {private_key: this.newKeyInput}
         )
@@ -296,7 +296,7 @@ window.app = Vue.createApp({
       LNbits.api
         .request(
           'POST',
-          '/nsecbunker/api/v1/keys/generate',
+          '/nsec_oracle/api/v1/keys/generate',
           this.selectedWallet.adminkey
         )
         .then(response => {
@@ -319,7 +319,7 @@ window.app = Vue.createApp({
           LNbits.api
             .request(
               'DELETE',
-              '/nsecbunker/api/v1/keys/' + keyId,
+              '/nsec_oracle/api/v1/keys/' + keyId,
               this.selectedWallet.adminkey
             )
             .then(() => {
@@ -343,7 +343,7 @@ window.app = Vue.createApp({
       LNbits.api
         .request(
           'PUT',
-          '/nsecbunker/api/v1/keys/' + this.editKeyForm.id,
+          '/nsec_oracle/api/v1/keys/' + this.editKeyForm.id,
           this.selectedWallet.adminkey,
           {label: this.editKeyForm.label || null}
         )
@@ -365,7 +365,7 @@ window.app = Vue.createApp({
       LNbits.api
         .request(
           'GET',
-          '/nsecbunker/api/v1/permissions',
+          '/nsec_oracle/api/v1/permissions',
           this.selectedWallet.adminkey
         )
         .then(response => {
@@ -397,7 +397,7 @@ window.app = Vue.createApp({
       LNbits.api
         .request(
           'POST',
-          '/nsecbunker/api/v1/permissions',
+          '/nsec_oracle/api/v1/permissions',
           this.selectedWallet.adminkey,
           payload
         )
@@ -434,7 +434,7 @@ window.app = Vue.createApp({
       LNbits.api
         .request(
           'PUT',
-          '/nsecbunker/api/v1/permissions/' + this.editPermForm.id,
+          '/nsec_oracle/api/v1/permissions/' + this.editPermForm.id,
           this.selectedWallet.adminkey,
           {
             rate_limit_count: this.editPermForm.rate_limit_count,
@@ -458,7 +458,7 @@ window.app = Vue.createApp({
         LNbits.api
           .request(
             'DELETE',
-            '/nsecbunker/api/v1/permissions/' + permId,
+            '/nsec_oracle/api/v1/permissions/' + permId,
             this.selectedWallet.adminkey
           )
           .then(() => {
@@ -484,7 +484,7 @@ window.app = Vue.createApp({
       LNbits.api
         .request(
           'GET',
-          '/nsecbunker/api/v1/log?offset=' + offset + '&limit=' + rowsPerPage,
+          '/nsec_oracle/api/v1/log?offset=' + offset + '&limit=' + rowsPerPage,
           this.selectedWallet.adminkey
         )
         .then(response => {

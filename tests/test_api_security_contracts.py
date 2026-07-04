@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 
 def _load_views_api_module():
-    package_name = "nsecbunker_api_testpkg"
+    package_name = "nsec_oracle_api_testpkg"
     base_path = Path(__file__).resolve().parents[1]
 
     package = types.ModuleType(package_name)
