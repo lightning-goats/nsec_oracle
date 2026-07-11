@@ -3,9 +3,9 @@ import asyncio
 from loguru import logger
 
 from .crud import delete_old_signing_logs
+from .models import LOG_RETENTION_DAYS
 
 LOG_CLEANUP_INTERVAL = 3600  # 1 hour
-LOG_RETENTION_DAYS = 30
 
 
 async def cleanup_old_signing_logs():

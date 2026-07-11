@@ -122,3 +122,77 @@ def test_permission_rate_limits_allow_unlimited_or_positive_pairs():
     assert unlimited.rate_limit_count is None
     assert limited.rate_limit_seconds == 60
     assert cleared.rate_limit_count is None
+
+
+def test_sign_event_coerces_integral_kind_and_created_at():
+    models = _load_models_module()
+
+    assert models.SignEventData(
+        extension_id="ext", event={"kind": 1.0}
+    ).event["kind"] == 1
+    assert models.SignEventData(
+        extension_id="ext", event={"kind": "7"}
+    ).event["kind"] == 7
+    assert models.SignEventData(
+        extension_id="ext", event={"kind": 1, "created_at": 1700000000.0}
+    ).event["created_at"] == 1700000000
+
+
+@pytest.mark.parametrize("bad_kind", [True, 1.5, "abc", -1, 70000])
+def test_sign_event_rejects_bad_kind(bad_kind):
+    models = _load_models_module()
+    with pytest.raises(ValidationError):
+        models.SignEventData(extension_id="ext", event={"kind": bad_kind})
+
+
+def test_sign_event_rejects_bad_tags_and_created_at():
+    models = _load_models_module()
+    with pytest.raises(ValidationError):
+        models.SignEventData(extension_id="ext", event={"kind": 1, "tags": "nope"})
+    with pytest.raises(ValidationError):
+        models.SignEventData(
+            extension_id="ext", event={"kind": 1, "created_at": "soon"}
+        )
+
+
+@pytest.mark.parametrize(
+    "bad_ext", ["bad id", "with\nnewline", "", "x" * 65, "semi;colon"]
+)
+def test_extension_id_rejects_injection_and_bounds(bad_ext):
+    models = _load_models_module()
+    with pytest.raises(ValidationError):
+        models.SignEventData(extension_id=bad_ext, event={"kind": 1})
+    with pytest.raises(ValidationError):
+        models.QuickSetupData(extension_id=bad_ext, key_id="k")
+    with pytest.raises(ValidationError):
+        models.CreatePermissionData(extension_id=bad_ext, key_id="k", kind=1)
+
+
+def test_extension_id_accepts_normal_machine_name():
+    models = _load_models_module()
+    assert (
+        models.SignEventData(
+            extension_id="cyberherd_messaging", event={"kind": 1}
+        ).extension_id
+        == "cyberherd_messaging"
+    )
+
+
+def test_rate_limit_window_cannot_exceed_log_retention():
+    models = _load_models_module()
+    with pytest.raises(ValidationError):
+        models.CreatePermissionData(
+            extension_id="ext",
+            key_id="k",
+            kind=1,
+            rate_limit_count=5,
+            rate_limit_seconds=models.MAX_RATE_LIMIT_SECONDS + 1,
+        )
+    ok = models.CreatePermissionData(
+        extension_id="ext",
+        key_id="k",
+        kind=1,
+        rate_limit_count=5,
+        rate_limit_seconds=models.MAX_RATE_LIMIT_SECONDS,
+    )
+    assert ok.rate_limit_seconds == models.MAX_RATE_LIMIT_SECONDS

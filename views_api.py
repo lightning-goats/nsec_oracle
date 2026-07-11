@@ -66,6 +66,17 @@ async def _require_owned_key(wallet_id: str, key_id: str) -> OracleKey:
     return key
 
 
+async def _require_owned_permission(
+    wallet_id: str, perm_id: str
+) -> OraclePermission:
+    perm = await get_permission(perm_id)
+    if not perm or perm.wallet != wallet_id:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND, detail="Permission not found."
+        )
+    return perm
+
+
 # --- Keys ---
 
 
@@ -103,15 +114,7 @@ async def api_delete_key(
     key_id: str,
     wallet: WalletTypeInfo = Depends(require_admin_key),
 ) -> None:
-    key = await get_key(key_id)
-    if not key:
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail="Key not found."
-        )
-    if key.wallet != wallet.wallet.id:
-        raise HTTPException(
-            status_code=HTTPStatus.FORBIDDEN, detail="Not your key."
-        )
+    await _require_owned_key(wallet.wallet.id, key_id)
     # Cascade: delete permissions first, then the key
     await delete_permissions_for_key(key_id)
     await delete_key(key_id)
@@ -140,15 +143,7 @@ async def api_update_key(
     data: UpdateKeyData,
     wallet: WalletTypeInfo = Depends(require_admin_key),
 ) -> PublicOracleKey:
-    key = await get_key(key_id)
-    if not key:
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail="Key not found."
-        )
-    if key.wallet != wallet.wallet.id:
-        raise HTTPException(
-            status_code=HTTPStatus.FORBIDDEN, detail="Not your key."
-        )
+    await _require_owned_key(wallet.wallet.id, key_id)
     updated = await update_key(key_id, data)
     return _public_key(updated)
 
@@ -160,15 +155,7 @@ async def api_export_key(
     key_id: str,
     wallet: WalletTypeInfo = Depends(require_admin_key),
 ) -> dict:
-    key = await get_key(key_id)
-    if not key:
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail="Key not found."
-        )
-    if key.wallet != wallet.wallet.id:
-        raise HTTPException(
-            status_code=HTTPStatus.FORBIDDEN, detail="Not your key."
-        )
+    key = await _require_owned_key(wallet.wallet.id, key_id)
     private_key_hex = await get_decrypted_private_key(key_id)
     # Exporting the raw private key is the single most sensitive operation in
     # the vault — always leave an audit trail.
@@ -213,15 +200,7 @@ async def api_update_permission(
     data: UpdatePermissionData,
     wallet: WalletTypeInfo = Depends(require_admin_key),
 ) -> OraclePermission:
-    perm = await get_permission(perm_id)
-    if not perm:
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail="Permission not found."
-        )
-    if perm.wallet != wallet.wallet.id:
-        raise HTTPException(
-            status_code=HTTPStatus.FORBIDDEN, detail="Not your permission."
-        )
+    await _require_owned_permission(wallet.wallet.id, perm_id)
     return await update_permission(perm_id, data)
 
 
@@ -232,15 +211,7 @@ async def api_delete_permission(
     perm_id: str,
     wallet: WalletTypeInfo = Depends(require_admin_key),
 ) -> None:
-    perm = await get_permission(perm_id)
-    if not perm:
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND, detail="Permission not found."
-        )
-    if perm.wallet != wallet.wallet.id:
-        raise HTTPException(
-            status_code=HTTPStatus.FORBIDDEN, detail="Not your permission."
-        )
+    await _require_owned_permission(wallet.wallet.id, perm_id)
     await delete_permission(perm_id)
 
 

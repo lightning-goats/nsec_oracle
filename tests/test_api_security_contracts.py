@@ -160,6 +160,60 @@ def test_sign_endpoint_forwards_requested_key_id():
     ]
 
 
+def _assert_raises_404(coro_factory):
+    from fastapi import HTTPException
+
+    try:
+        asyncio.run(coro_factory())
+    except HTTPException as exc:
+        assert exc.status_code == 404, f"expected 404, got {exc.status_code}"
+    else:
+        raise AssertionError("expected an HTTPException(404)")
+
+
+def test_key_endpoints_return_404_not_403_for_other_wallet_key():
+    """A key that exists but belongs to another wallet must 404, not 403 — a
+    403 would confirm the id exists and leak cross-wallet existence."""
+    views_api, _ = _load_views_api_module()
+
+    async def get_key(key_id):
+        return SimpleNamespace(id=key_id, wallet="other-wallet", pubkey_hex="pk")
+
+    views_api.get_key = get_key
+    wallet = SimpleNamespace(wallet=SimpleNamespace(id="mine"))
+
+    _assert_raises_404(lambda: views_api.api_delete_key(key_id="k", wallet=wallet))
+    _assert_raises_404(
+        lambda: views_api.api_update_key(
+            key_id="k", data=views_api.UpdateKeyData(label="x"), wallet=wallet
+        )
+    )
+    _assert_raises_404(lambda: views_api.api_export_key(key_id="k", wallet=wallet))
+
+
+def test_permission_endpoints_return_404_not_403_for_other_wallet_permission():
+    views_api, _ = _load_views_api_module()
+
+    async def get_permission(perm_id):
+        return SimpleNamespace(id=perm_id, wallet="other-wallet")
+
+    views_api.get_permission = get_permission
+    wallet = SimpleNamespace(wallet=SimpleNamespace(id="mine"))
+
+    _assert_raises_404(
+        lambda: views_api.api_update_permission(
+            perm_id="p",
+            data=views_api.UpdatePermissionData(
+                rate_limit_count=1, rate_limit_seconds=60
+            ),
+            wallet=wallet,
+        )
+    )
+    _assert_raises_404(
+        lambda: views_api.api_delete_permission(perm_id="p", wallet=wallet)
+    )
+
+
 def test_discovery_checks_permissions_for_default_key():
     views_api, _ = _load_views_api_module()
 
